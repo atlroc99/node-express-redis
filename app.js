@@ -30,16 +30,19 @@ app.get('/:id', async (req, res) => {
     client.get(id, (err, object) => {
         if (err) throw err;
         console.log('BEFORE PARSE OBJECT : ', object)
-        res.status(200).json(object)
+        const isComplete = getChecklistStates(object)
+        res.status(200).json(object, isComplete)
     })
 })
 
+// checks and returns true if all checkBoxes are checked
 app.put('/:id', (req, res) => {
     console.log('updating data | customerID:', req.params.id);
-    const data = req.body
+    const body = req.body
     const id = req.params.id === 'NIL' ? shortid.generate() : req.params.id;
-    client.set(id, JSON.stringify(data))
-    res.status(201).json({ 'id': id }).end();
+    client.set(id, JSON.stringify(body))
+    const isComplete = getChecklistStates(body.data);
+    res.status(201).json({ 'id': id, 'isComplete': isComplete }).end();
 });
 
 app.post('/:id', (req, res) => {
@@ -68,7 +71,7 @@ app.post('/welcome/sendmail', async (req, res) => {
         text: data
     }
 
-transporter.sendMail(mailOptions, (error, response) => {
+    transporter.sendMail(mailOptions, (error, response) => {
         if (error) throw error;
         console.log(response);
         res.send(response);
@@ -80,3 +83,10 @@ app.listen(8000, () => {
     console.log('NODE SERVER STARTED')
     console.log('PASS: ', process.env.PASS)
 });
+
+const getChecklistStates = (arg) => {
+    if (arg && typeof(arg) === 'object') {
+        return Object.values(arg).every(val => val === true)
+    } 
+    return false;
+}
