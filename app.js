@@ -3,7 +3,8 @@ const redis = require('redis');
 const bodyParser = require('body-parser');
 const shortid = require('shortid');
 const nodemailer = require('nodemailer');
-const cors = require('cors')
+const cors = require('cors');
+const checklist = require('./checklist');
 
 const app = express();
 app.use(cors());
@@ -23,15 +24,26 @@ const transporter = nodemailer.createTransport({
     }
 });
 
+app.get('/checklist/items', async(req, res) =>{
+    console.log('checklist:', checklist);
+    res.send(checklist);
+})
 
 app.get('/:id', async (req, res) => {
     const id = req.params.id
     console.log('ID:', id);
-    client.get(id, (err, object) => {
+    client.get(id, (err, checklistsObject) => {
         if (err) throw err;
-        console.log('BEFORE PARSE OBJECT : ', object)
-        const isComplete = getChecklistStates(object)
-        res.status(200).json(object, isComplete)
+        console.log('Response: ', checklistsObject)
+
+        if (!checklistsObject) {
+            console.log('object is null')
+            res.send({})
+        } else {
+            const isComplete = getChecklistStates(checklistsObject)
+            const response_body = { checklistsObject, isComplete }
+            res.send(response_body)
+        }
     })
 })
 
@@ -85,8 +97,8 @@ app.listen(8000, () => {
 });
 
 const getChecklistStates = (arg) => {
-    if (arg && typeof(arg) === 'object') {
+    if (arg && typeof (arg) === 'object') {
         return Object.values(arg).every(val => val === true)
-    } 
+    }
     return false;
 }
